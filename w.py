@@ -3,10 +3,13 @@ import pandas as pd
 import numpy as np
 import click
 import datetime
-from datetime import datetime, date
+from uniplot import plot
+from datetime import datetime, date, timedelta
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
+from rich.panel import Panel
+from rich.padding import Padding
 
 ROS_LATITUDE = -32.95
 ROS_LONGITUDE = -60.64
@@ -20,38 +23,35 @@ def read_weather_codes():
 
 wc = read_weather_codes()
 
-# @click.command()
-# @click.option('--days', default=1, help='The forecast time-window')
-# @click.option('--output', default='./', help='')
-# @click.option('--generate-pdf', default=True, help='Whether to generate a PDF containing all barcodes or not')
-# def get_forecast_today():
-#   # console.input("What is [i]your[/i] [bold red]name[/]? :smiley: ")
-#   query_params = {
-#     'latitude': ROS_LATITUDE,
-#     'longitude': ROS_LONGITUDE,
-#     'daily': 'weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_hours,precipitation_probability_max',
-#     'current_weather': True,
-#     'timezone': 'America/Sao_Paulo',
-#     'forecast_days': 1
-#   }
-
-#   res = requests.get(base_url, params = query_params).json()
-#   console.log(res)
-#   return
-
 @click.command()
-@click.option('--forecast', default=0, help='The time window to forecast (in days)')
-def get_weather(forecast):
-  if forecast == 0:
+@click.option('--forecast-days', default=0, help='The time window to forecast (in days)')
+def get_weather(forecast_days):
+  if forecast_days == 0:
     get_current_weather()
   else:
-    get_forecast(forecast)
+    get_forecast(forecast_days)
 
-def get_forecast(forecast):
-  console.print('feature not supported')
+def get_forecast(forecast_days):
+  if forecast_days > 16:
+    error = Text('Cannot generate forecasts for more than 16 days ahead. Forecasts will be retrieved for the next 16 days.', justify='center')
+    error.stylize("bold red")
+    console.print(error)
+    forecast_days = 16
+
+  query_params = {
+    'latitude': ROS_LATITUDE,
+    'longitude': ROS_LONGITUDE,
+    'daily': 'weathercode,temperature_2m_max,temperature_2m_min,apparent_temperature_max,apparent_temperature_min,precipitation_sum,precipitation_hours,precipitation_probability_max',
+    'current_weather': True,
+    'timezone': 'America/Sao_Paulo',
+    'forecast_days': forecast_days
+  }
+
+  res = requests.get(base_url, params = query_params).json()
+  print_forecast(res['daily'], forecast_days)
+  graph_forecast(res['daily'])
   
 def get_current_weather():
-  base_url = 'https://api.open-meteo.com/v1/forecast'
   query_params = {
     'latitude': ROS_LATITUDE,
     'longitude': ROS_LONGITUDE,
@@ -63,26 +63,49 @@ def get_current_weather():
   current_weather = res["current_weather"]
   print_current_weather(current_weather)
 
+def graph_forecast(forecast):
+  plot(ys = forecast['temperature_2m_max'], lines=True, title="Max. Temperature (°C)", y_unit="°C")
+
+def print_forecast(forecast, forecast_days):
+  table = Table(title=f'Forecast for the following {forecast_days} days', caption='Source: open-meteo.com')
+
+  table.add_column()
+  for i in range(forecast_days):
+    day = date.today() + timedelta(days = i)
+    day = day.strftime('%A %d')
+    table.add_column(day, justify='right')
+
+  # table.add_row('General Condition', get_weather_code_interpretation(forecast['weathercode']))
+  table.add_row('Max. Temperature (°C)', *[str(value) for value in forecast['temperature_2m_max']])
+  table.add_row('Min. Temperature (°C)', *[str(value) for value in forecast['temperature_2m_min']])
+  table.add_row('Apparent Max. Temperature (°C)', *[str(value) for value in forecast['apparent_temperature_max']])
+  table.add_row('Apparent Min. Temperature (°C)', *[str(value) for value in forecast['apparent_temperature_min']])
+  table.add_row('Precipitations (mm)', *[str(value) for value in forecast['precipitation_sum']])
+  table.add_row('Precipitation Hours (h)', *[str(value) for value in forecast['precipitation_hours']])
+  table.add_row('Max. Precipiation Probability (%)', *[str(value) for value in forecast['precipitation_probability_max']])
+
+  padding = Padding("", (1, 0), expand=True)
+  console.print(padding)
+  console.print(table)
+  console.print(padding)
+
+
 def print_current_weather(current_weather):
   table = Table(title='Current Weather Conditions')
-  table.add_column('Parameter', justify = 'center', header_style="bold magenta", no_wrap = True)
-  table.add_column('Value', justify = 'right', header_style = 'bold magenta', no_wrap = True)
+  table.add_column()
+  table.add_column('Values', justify = 'right')
 
+  table.add_row('Date Time', datetime.now().strftime('%A %B %d, %H:%M'))
   table.add_row('General Condition', get_weather_code_interpretation(current_weather['weathercode']))
-  table.add_row('Temperature', str(current_weather['temperature']))
-  table.add_row('Wind Speed', str(current_weather['windspeed']))
-  table.add_row('Wind Direction', str(current_weather['winddirection']))
+  table.add_row('Temperature', f"{str(current_weather['temperature'])} °C")
+  table.add_row('Wind Speed', f"{str(current_weather['windspeed'])} Km/h")
+  table.add_row('Wind Direction', f"{str(current_weather['winddirection'])} °")
 
-  greeting = Text(f'Hi there! Here are the current weather conditions')
-  greeting.stylize("bold magenta")
 
-  now = datetime.now()
-  current_datetime = Text(now.strftime('%A %B %d, %H%M'))
-  current_datetime.stylize("bold magenta")
-
-  console.print(greeting)
-  console.print(current_datetime)
+  padding = Padding("", (1, 0), expand=True)
+  console.print(padding)
   console.print(table)
+  console.print(padding)
 
 def get_weather_code_interpretation(weather_code: int):
   wc = pd.read_csv('weather-codes.csv')
