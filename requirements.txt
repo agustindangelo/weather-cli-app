@@ -1,0 +1,5 @@
+rich
+pandas
+python
+click
+requests
