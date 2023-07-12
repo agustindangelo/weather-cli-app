@@ -1,5 +1,4 @@
-rich
-pandas
-python
-click
-requests
+rich==13.4.2
+pandas==2.0.3
+click==8.1.4
+requests==2.31.0
