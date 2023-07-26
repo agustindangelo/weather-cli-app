@@ -1,6 +1,6 @@
 import requests
 import pandas as pd
-import numpy as np
+import os
 import click
 import datetime
 from uniplot import plot
@@ -8,7 +8,6 @@ from datetime import datetime, date, timedelta
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
-from rich.panel import Panel
 from rich.padding import Padding
 
 ROS_LATITUDE = -32.95
@@ -137,7 +136,11 @@ def print_current_weather(current_weather):
   console.print(padding)
 
 def get_weather_code_interpretation(weather_code: int):
-  wc = pd.read_csv('weather-codes.csv')
+  base_path = os.path.realpath(os.path.dirname(__file__))
+  weather_codes_file_name = 'weather-codes.csv'
+  weather_codes_file_path = os.path.join(base_path, weather_codes_file_name)
+
+  wc = pd.read_csv(weather_codes_file_path)
   wc['Code'] = wc['Code'].apply(lambda string: string.split(','))
   wc['Code'] = wc['Code'].apply(lambda arr: [int(element) for element in arr])
   msk = wc['Code'].apply(lambda x: weather_code in x)
