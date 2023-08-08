@@ -16,7 +16,7 @@ def get_forecast(forecast_days):
 
   res = requests.get(base_url, params = query_params).json()
 
-  return res
+  return res['daily']
 
 def get_current_weather():
   query_params = {

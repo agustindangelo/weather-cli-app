@@ -1,7 +1,10 @@
 from uniplot import plot
 from rich.padding import Padding
+from rich.console import Console
 
-def graph_forecast(forecast, forecast_days, console):
+console = Console()
+
+def graph_forecast(forecast, forecast_days):
   plot(
     ys = [forecast['temperature_2m_max'], forecast['temperature_2m_min']],
     legend_labels = ['Max. Temperature', 'Min. Temperature'],

@@ -1,10 +1,14 @@
 import datetime
+import pandas as pd
 import os
 from datetime import datetime, date, timedelta
 from rich.table import Table
 from rich.padding import Padding
+from rich.console import Console
 
-def print_forecast(forecast, forecast_days, console):
+console = Console()
+
+def print_forecast(forecast, forecast_days):
   table = Table(title=f'Forecast for the following {forecast_days} days', caption='Source: open-meteo.com')
 
   table.add_column(no_wrap=True)
@@ -27,7 +31,7 @@ def print_forecast(forecast, forecast_days, console):
   console.print(padding)
 
 
-def print_current_weather(current_weather, console):
+def print_current_weather(current_weather):
   table = Table(title='Current Weather Conditions')
   table.add_column()
   table.add_column('Values', justify = 'right')
@@ -46,8 +50,9 @@ def print_current_weather(current_weather, console):
 
 def get_weather_code_interpretation(weather_code: int):
   base_path = os.path.realpath(os.path.dirname(__file__))
+  assets_path = os.path.join(base_path, '..', 'assets')
   weather_codes_file_name = 'weather-codes.csv'
-  weather_codes_file_path = os.path.join(base_path, weather_codes_file_name)
+  weather_codes_file_path = os.path.join(assets_path, weather_codes_file_name)
 
   wc = pd.read_csv(weather_codes_file_path)
   wc['Code'] = wc['Code'].apply(lambda string: string.split(','))
